@@ -46,7 +46,7 @@ const  MyBezierLineChart = (props) => {
   const [yData, setYData] = useState([1])
   const [flag, setFlag] = useState(true)
   const [selectedDataIndex, setSelectedDataIndex] = useState(null)
-
+  
   let [tooltipPos, setTooltipPos] = useState({
     x: 0,
     y: 0,
@@ -65,43 +65,42 @@ const  MyBezierLineChart = (props) => {
           'ngrok-skip-browser-warning': 'true',
           Accept: 'application/json'
         }
-      })
-
+      });
+  
       if (!response.data) {
-        throw new Error('Empty response data')
+        throw new Error('Empty response data');
       }
-
-      const dataArray = response.data
-
+  
+      const dataArray = response.data;
+  
       if (dataArray && Array.isArray(dataArray)) {
         const newData = dataArray.map(data => {
           const { value, timestamp } = data
-          const timestampDate = formatTimestamp(timestamp)
+          const timestampDate = new Date(timestamp)
           if (isNumber(value)) {
             return {
               x: timestampDate,
               y: label === 'Alkalinity (mg/l)' ?
-                ( (parseFloat(value) * 0.64 ) / 0.6).toFixed(2) : label === 'Salinity (‰)' ?
+                ((parseFloat(value) * 0.64) / 0.6).toFixed(2) : label === 'Salinity (‰)' ?
                   (parseFloat(value) * 0.00064).toFixed(2) : label === 'DO (mg/l)' ?
                     (parseFloat(value) * 1.33).toFixed(2) : parseFloat(value)
-            }
-          }
-          else {
+            };
+          } else {
             return {
               x: timestampDate,
               y: parseFloat(4)
-            }
+            };
           }
-        })
-        newData.sort((a, b) => a.x - b.x)
-        setXData(newData.map(item => item.x))
-        setYData(newData.map(item => item.y))
+        });
+  
+        newData.sort((a, b) => a.x - b.x);
+        setXData(newData.map(item => item.x));
+        setYData(newData.map(item => item.y));
       }
-
     } catch (error) {
-      console.error('Axios error:', error)
+      console.error('Axios error:', error);
     }
-  }
+  };
 
   useEffect(() => {
     fetchData()
@@ -114,8 +113,11 @@ const  MyBezierLineChart = (props) => {
     return () => {
       clearInterval(intervalId)
     }
-
+    
   }, [flag])
+
+  
+  
 
 
   return (
@@ -123,7 +125,7 @@ const  MyBezierLineChart = (props) => {
       <Text style={styles.header}>{label}</Text>
       <LineChart
         data={{
-          labels: xData,
+          labels: [formatTimestamp(xData[0]), formatTimestamp(xData[xData.length - 1])],
           datasets: [
             {
               data: yData,
@@ -154,19 +156,26 @@ const  MyBezierLineChart = (props) => {
             borderRadius: 16,
           },
           propsForDots: {
-            r: "3",
-            strokeWidth: "2",
-          }, 
+            r: "0",
+            //strokeWidth: "2",
+            stroke: "red"
+          }
         }}
+        withInnerLines={false} // hide the grid behind chart
+        hideLegend={ true }
         bezier
         style={{
-          marginVertical: 8,
+          marginVertical: 6,
           borderRadius: 16,
         }}
-        hidePointsAtIndex={xData.map((item, idx) => (idx !== 1) && idx)}
         decorator={() => {
 
-          const rectWidth = 130
+          const rectWidth = label === 'pH' 
+                            ? 100 : label === 'DO (mg/l)'
+                            ? 125 : label === 'Temperature (°C)'
+                            ? 160 : label === 'Turbidity (V)'
+                            ? 130 : label === 'Alkalinity (mg/l)'
+                            ? 180 : 130
           const rectHeight = 40
           const rectX = tooltipPos.x - 15
           const rectY = tooltipPos.y + 10
@@ -211,24 +220,24 @@ const  MyBezierLineChart = (props) => {
         }}
         onDataPointClick={data => {
           let isSamePoint = tooltipPos.x === data.x && tooltipPos.y === data.y;
-          
           isSamePoint
             ? setTooltipPos(previousState => {
+                //setSelectedDataIndex(null)
                 return {
                   ...previousState,
                   value: data.value,
-                  label: xData[data.index],
+                  label: formatTimestamp(xData[data.index]),
                   visible: !previousState.visible,
                 };
               })
             : setTooltipPos({
                 x: data.x,
                 value: data.value,
-                label: xData[data.index],
+                label: formatTimestamp(xData[data.index]),
                 y: data.y,
                 visible: true,
               });
-              
+              //setSelectedDataIndex(data.index)
         }}
       />
     </>
